@@ -1,7 +1,8 @@
 """Laptop-side server for the IR speed tracker.
 
 The Arduino POSTs each reading to /api/speed as JSON: {"time_s": 0.0412, "speed_mps": 2.427}.
-The dashboard at / polls /api/readings once a second. Readings are kept in readings.csv.
+The dashboard (static files in web/) polls /api/readings once a second.
+Readings are kept in readings.csv.
 
 Run:  python server.py [--port 8080]
 Standard library only; no installs needed.
@@ -15,12 +16,23 @@ import threading
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 HERE = Path(__file__).resolve().parent
-DASHBOARD_PATH = HERE / "dashboard.html"
+WEB_ROOT = HERE / "web"
 CSV_PATH = HERE / "readings.csv"
 FIELDS = ["id", "received_at", "time_s", "speed_mps", "speed_kmh"]
 MAX_RETURNED = 200
+
+# Explicit types: on Windows, mimetypes can read .js as text/plain from the
+# registry, which browsers refuse to run as an ES module.
+CONTENT_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+}
 
 lock = threading.Lock()
 readings = []
@@ -64,31 +76,56 @@ def add_reading(data):
     return reading
 
 
+def snapshot():
+    # Stats cover every reading; only the most recent MAX_RETURNED rows are sent
+    with lock:
+        speeds = [r["speed_kmh"] for r in readings]
+        return {
+            "readings": readings[-MAX_RETURNED:],
+            "stats": {
+                "count": len(speeds),
+                "top_kmh": max(speeds) if speeds else None,
+                "avg_kmh": round(sum(speeds) / len(speeds), 3) if speeds else None,
+            },
+        }
+
+
+def resolve_static(url_path):
+    """Map a URL path to a file inside WEB_ROOT, or None if it isn't servable."""
+    relative = "index.html" if url_path == "/" else url_path.lstrip("/")
+    file = (WEB_ROOT / relative).resolve()
+    if not file.is_relative_to(WEB_ROOT) or not file.is_file():
+        return None
+    if file.suffix not in CONTENT_TYPES:
+        return None
+    return file
+
+
 class Handler(BaseHTTPRequestHandler):
-    def send_json(self, status, payload):
-        body = json.dumps(payload).encode()
+    def send_body(self, status, body, content_type):
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache")
         self.end_headers()
         self.wfile.write(body)
 
+    def send_json(self, status, payload):
+        self.send_body(status, json.dumps(payload).encode(), "application/json")
+
     def do_GET(self):
-        if self.path == "/":
-            body = DASHBOARD_PATH.read_bytes()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-        elif self.path == "/api/readings":
-            with lock:
-                self.send_json(200, {"readings": readings[-MAX_RETURNED:], "count": len(readings)})
-        else:
+        path = urlsplit(self.path).path
+        if path == "/api/readings":
+            self.send_json(200, snapshot())
+            return
+        file = resolve_static(path)
+        if file is None:
             self.send_json(404, {"error": "not found"})
+            return
+        self.send_body(200, file.read_bytes(), CONTENT_TYPES[file.suffix])
 
     def do_POST(self):
-        if self.path != "/api/speed":
+        if urlsplit(self.path).path != "/api/speed":
             self.send_json(404, {"error": "not found"})
             return
         try:
