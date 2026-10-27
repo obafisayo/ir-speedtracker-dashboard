@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IR Speed Tracker</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <script type="module" src="/js/main.js"></script>
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <h1 class="page-title">IR Speed Tracker</h1>
+      <div class="status" role="status" aria-live="polite">
+        <span class="status__dot" id="status-dot"></span>
+        <span id="status-text">Connecting…</span>
+      </div>
+    </header>
+
+    <section class="card hero" id="hero" aria-labelledby="hero-label">
+      <h2 class="label" id="hero-label">Last car</h2>
+      <p class="hero__speed">
+        <span id="latest-speed">—</span> <span class="hero__unit">km/h</span>
+      </p>
+      <p class="hero__detail" id="latest-detail">Waiting for the first car…</p>
+    </section>
+
+    <section class="stats" aria-label="Summary">
+      <div class="card stat">
+        <h2 class="label">Cars counted</h2>
+        <p class="stat__value" id="stat-count">0</p>
+      </div>
+      <div class="card stat">
+        <h2 class="label">Top speed</h2>
+        <p class="stat__value" id="stat-top">—</p>
+      </div>
+      <div class="card stat">
+        <h2 class="label">Average speed</h2>
+        <p class="stat__value" id="stat-avg">—</p>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="recent-label">
+      <h2 class="label card__title" id="recent-label">Recent readings</h2>
+      <table class="readings">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col" class="hide-sm">Time</th>
+            <th scope="col">Gate time</th>
+            <th scope="col">m/s</th>
+            <th scope="col">km/h</th>
+          </tr>
+        </thead>
+        <tbody id="readings-body">
+          <tr><td colspan="5" class="readings__empty">No readings yet</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,42 @@
+/* Reset and page layout. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: 15px/1.4 var(--font-sans);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 20px;
+}
+
+@media (max-width: 520px) {
+  .hide-sm {
+    display: none;
+  }
+}
